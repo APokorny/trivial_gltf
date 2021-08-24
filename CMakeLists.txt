@@ -11,7 +11,7 @@ fetchcontent_declare(async_json
 
 fetchcontent_declare(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        development) # todo pick a tag
+  GIT_TAG        devel) # todo pick a tag
 
 fetchcontent_makeavailable(async_json)
 
@@ -38,7 +38,5 @@ if(gltf_BUILD_TESTS)
 ## target_link_libraries(tests Catch2::Catch2)
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
     include(CTest)
-    include(Catch)
-    #     catch_discover_tests()
     add_subdirectory(test)
 endif()
