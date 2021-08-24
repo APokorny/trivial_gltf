@@ -2,10 +2,7 @@ cmake_policy(SET CMP0057 NEW)
 cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0077 NEW)
 cmake_minimum_required(VERSION 3.14)
-project(trivial_gltf VERSION 0.2.0 LANGUAGES CXX)
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag(-std=c++17 HAS_CXX17_FLAG)
-check_cxx_compiler_flag(-std=c++2a HAS_CXX20_FLAG)
+project(trivial_gltf VERSION 0.1.0 LANGUAGES CXX)
 
 include(FetchContent)
 fetchcontent_declare(async_json
@@ -14,18 +11,9 @@ fetchcontent_declare(async_json
 
 fetchcontent_declare(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v2.13.1)
+  GIT_TAG        development) # todo pick a tag
 
 fetchcontent_makeavailable(async_json)
-
-# use target_compile_features(target cxx_std_20)
-if(HAS_CXX20_FLAG)
-  set(CMAKE_CXX_STANDARD 20)
-elseif(HAS_CXX17_FLAG)
-  set(CMAKE_CXX_STANDARD 17)
-else()
-  message(FATAL_ERROR "requires at least c++17")
-endif()
 
 option(gltf_BUILD_TESTS "Build examples and tests" ON)
 add_library(gltf 
@@ -51,6 +39,6 @@ if(gltf_BUILD_TESTS)
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
     include(CTest)
     include(Catch)
-    catch_discover_tests()
+    #     catch_discover_tests()
     add_subdirectory(test)
 endif()
