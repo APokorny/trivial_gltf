@@ -13,7 +13,12 @@ fetchcontent_declare(Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        devel) # todo pick a tag
 
+FetchContent_declare(glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG        master) # todo pick a revision
+
 fetchcontent_makeavailable(async_json)
+fetchcontent_makeavailable(glm)
 
 option(gltf_BUILD_TESTS "Build examples and tests" ON)
 add_library(gltf 
