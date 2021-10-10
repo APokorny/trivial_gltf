@@ -3,6 +3,7 @@
 #include <iostream>
 #include <async_json/json_extractor.hpp>
 #include <trivial_gltf/gltf_parse.h>
+
 namespace a = async_json;
 void parse_json(std::istream& in, std::size_t length)
 {
@@ -10,11 +11,28 @@ void parse_json(std::istream& in, std::size_t length)
     std::string foo;
     buf.resize(length);
     in.read(buf.data(), length);
-    auto        extractor = a::make_extractor([](a::error_cause er) { std::cout << "ERROR" << static_cast<int>(er) << " \n"; },
-                                       a::path(a::assign_string(foo), "var", "blub"));
-    extractor.parse_bytes(std::string_view(buf));
- 
-    std::cout << buf;
+    trivial_gltf::doc dest;
+
+    auto parser = trivial_gltf::create_parser(dest);
+
+    parser(std::string_view(buf));
+
+    for (auto const& item : dest.nodes) std::cout << "node: " << item.name << '\n';
+    for (auto const& item : dest.meshes) std::cout << "mesh: " << item.name << '\n';
+    for (auto const& item : dest.textures) std::cout << "texture: " << item.name << '\n';
+    for (auto const& item : dest.animations)
+    {
+        std::cout << "animation: " << item.name << " ";
+        for (auto const& c : item.channels) std::cout << "CH:" << c.sampler_id << " " << c.node_id << ", ";
+        for (auto const& s : item.samplers) std::cout << "SA:" << s.input << " " << s.output << ", ";
+        std::cout << "\n";
+    }
+    for (auto const& item : dest.buffer_views)
+        std::cout << "buffer: " << item.buffer << " " << item.length << " " << item.offset << " " << item.stride << " " << item.target
+                  << '\n';
+    for (auto const& item : dest.accessors)
+        std::cout << "accessor: v:" << item.view << " o:" << item.offset << " c:" << item.count << " " << static_cast<int>(item.comp_type)
+                  << " " << static_cast<int>(item.type) << '\n';
 }
 
 int main(int argc, char const** argv)

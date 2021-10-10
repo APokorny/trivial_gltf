@@ -7,12 +7,16 @@
 #ifndef TRIVIAL_GLTF_GLTF_PARSE_H_INCLUDED
 #define TRIVIAL_GLTF_GLTF_PARSE_H_INCLUDED
 
+#include <tiny_tuple/tuple.h>
 #include <glm/gtx/quaternion.hpp>
 #include <vector>
 #include <string>
 #include <variant>
-#include <tiny_tuple/tuple.h>
+#include <utility>
+#include <functional>
+#include <span>
 
+// TODO most of the names are not necessary for anything - consider dropping / skipping
 namespace trivial_gltf
 {
 struct node
@@ -31,6 +35,16 @@ struct node
 
 struct skin
 {
+    std::string           name;
+    int32_t               skeleton;
+    int32_t               inverseBindMaterials;
+    std::vector<uint32_t> joints;
+};
+
+struct scene
+{
+    std::string           name;
+    std::vector<uint32_t> root_nodes;
 };
 
 enum class component : uint16_t
@@ -60,11 +74,11 @@ using attribute_value_type =
                  glm::vec<2, int16_t>, glm::vec<2, uint16_t>, glm::vec<2, int32_t>, glm::vec<2, uint32_t>, glm::vec<2, float>,
                  glm::vec<3, int8_t>, glm::vec<3, uint8_t>, glm::vec<3, int16_t>, glm::vec<3, uint16_t>, glm::vec<3, int32_t>,
                  glm::vec<3, uint32_t>, glm::vec<3, float>, glm::vec<4, int8_t>, glm::vec<4, uint8_t>, glm::vec<4, int16_t>,
-                 glm::vec<4, uint16_t>, glm::vec<4, int32_t>, glm::vec<4, uint32_t>, glm::vec<4, float>, glm::mat<2, int8_t>,
-                 glm::mat<2, uint8_t>, glm::mat<2, int16_t>, glm::mat<2, uint16_t>, glm::mat<2, int32_t>, glm::mat<2, uint32_t>,
-                 glm::mat<2, float>, glm::mat<3, int8_t>, glm::mat<3, uint8_t>, glm::mat<3, int16_t>, glm::mat<3, uint16_t>,
-                 glm::mat<3, int32_t>, glm::mat<3, uint32_t>, glm::mat<3, float>, glm::mat<4, int8_t>, glm::mat<4, uint8_t>,
-                 glm::mat<4, int16_t>, glm::mat<4, uint16_t>, glm::mat<4, int32_t>, glm::mat<4, uint32_t>, glm::mat<4, float>>;
+                 glm::vec<4, uint16_t>, glm::vec<4, int32_t>, glm::vec<4, uint32_t>, glm::vec<4, float>, glm::tmat2x2<int8_t>,
+                 glm::tmat2x2<uint8_t>, glm::tmat2x2<int16_t>, glm::tmat2x2<uint16_t>, glm::tmat2x2<int32_t>, glm::tmat2x2<uint32_t>,
+                 glm::tmat2x2<float>, glm::tmat3x3<int8_t>, glm::tmat3x3<uint8_t>, glm::tmat3x3<int16_t>, glm::tmat3x3<uint16_t>,
+                 glm::tmat3x3<int32_t>, glm::tmat3x3<uint32_t>, glm::tmat3x3<float>, glm::tmat4x4<int8_t>, glm::tmat4x4<uint8_t>,
+                 glm::tmat4x4<int16_t>, glm::tmat4x4<uint16_t>, glm::tmat4x4<int32_t>, glm::tmat4x4<uint32_t>, glm::tmat4x4<float>>;
 
 enum class attribute : uint8_t
 {
@@ -105,29 +119,115 @@ enum class mode_type : uint8_t
     triangle_fan
 };
 
+enum class interpolation_type : uint8_t
+{
+    linear,
+    step,
+    cubic_spline
+};
+
+enum class path_type : uint8_t
+{
+    scale,
+    rotattion,
+    translation,
+    weights
+};
+
+using attribute_offset = tiny_tuple::tuple<attribute, uint32_t>;
+
 struct primitive
 {
-    attribute_flag                                      flags;
-    int32_t                                             material{-1};  // index of material
-    int32_t                                             indices{-1};   // accessor
-    mode_type                                           mode{mode_type::triangles};
-    std::vector<tiny_tuple::tuple<attribute, uint32_t>> attributes;
+    std::vector<attribute_offset> attributes;
+    int32_t                       indices{-1};   // accessor
+    int32_t                       material{-1};  // index of material
+    mode_type                     mode{mode_type::triangles};
+    attribute_flag                flags;
     // dont understand morph targets yet
 };
 struct mesh
 {
+    std::string            name;
     std::vector<primitive> primitives;
+    std::vector<float>     weights;
+};
+
+struct channel
+{
+    int32_t   sampler_id;
+    int32_t   node_id;
+    path_type path;  // scale rot translate weights
+};
+
+struct animation_sampler
+{
+    int32_t            input;
+    int32_t            output;
+    interpolation_type interpolation;  // linear step cubicspline
+};
+
+struct animation
+{
+    std::string                    name;
+    std::vector<channel>           channels;
+    std::vector<animation_sampler> samplers;
+};
+
+struct texture_info
+{
+    int32_t     index;
+    int32_t     tex_coord{0};
+    std::string name;
+};
+
+struct normal_texture_info : texture_info
+{
+    float scale;
+};
+struct occlusion_texture_info : texture_info
+{
+    float strength;
+};
+
+struct pbr_metallic_roughness
+{
+    glm::vec<4, float> base_color_factor;
+    texture_info       base_color_texture;
+    float              metallic_factor;
+    float              roughness_factor;
+    texture_info       metallic_roughness_texture;
+};
+
+enum class alpha_mode_type
+{
+    opaque,
+    mask,
+    blend
+};
+
+struct material
+{
+    std::string            name;
+    pbr_metallic_roughness data;
+    normal_texture_info    normal;
+    occlusion_texture_info occlusion;
+    texture_info           emissive;
+    glm::vec<3, float>     emssive_factor;
+    alpha_mode_type        alpha_mode;
+    float                  alpha_cut_off;
+    bool                   double_sided;
 };
 
 struct accessor
 {
-    uint32_t                                                             view;
-    uint32_t                                                             offset;
-    uint32_t                                                             count;
-    component_type                                                       comp_type;
-    attribute_type                                                       type;
-    bool                                                                 normalized;
-    std::vector<std::pair<attribute_scalar_type, attribute_scalar_type>> min_max;
+    uint32_t           view;
+    uint32_t           offset;
+    uint32_t           count;
+    component          comp_type;
+    attribute_type     type;
+    bool               normalized;
+    std::vector<float> max;
+    std::vector<float> min;
 
     // not supported sparse, name, extensions, extras
 };
@@ -150,18 +250,70 @@ struct external_buffer
     size_t      byte_length;
     std::string uri;
 };
-using buffer = std::variant<infile_buffer, external_buffer, loaded_buffer>;
+using buffer = std::variant<infile_buffer, external_buffer>;
+
+struct infile_image
+{
+    std::string name;
+    std::string mime;
+    int32_t     buffer_view;
+};
+struct external_image
+{
+    std::string name;
+    std::string uri;
+};
+using image = std::variant<infile_image, external_image>;
+
+struct sampler
+{
+    int32_t min_filter;
+    int32_t mag_filter;
+    int32_t wrap_s;
+    int32_t wrap_t;
+};
+struct texture
+{
+    int32_t     sampler;
+    int32_t     source;
+    std::string name;
+};
 
 struct doc
 {
-    doc(doc const&)                               = delete;
-    doc(doc&&)                                    = delete;
-    doc&                                  operator=(doc const&) = delete;
-    doc&                                  operator=(doc&&&) = delete;
-    std::vector<node>                     nodes;
-    std::vector<mesh>                     meshes;
-    std::vector<buffer>                   buffers;
-    const std::shared_ptr<cleanup_target> cleaner;
+    doc()                            = default;
+    doc(doc const&)                  = delete;
+    doc(doc&&)                       = delete;
+    doc&                     operator=(doc const&) = delete;
+    doc&                     operator=(doc&&) = delete;
+    std::vector<scene>       scenes;
+    std::vector<node>        nodes;
+    std::vector<mesh>        meshes;
+    std::vector<animation>   animations;
+    std::vector<material>    materials;
+    std::vector<accessor>    accessors;
+    std::vector<buffer_view> buffer_views;
+    std::vector<buffer>      buffers;
+    std::vector<skin>        skins;
+    std::vector<image>       images;
+    std::vector<sampler>     samplers;
+    std::vector<texture>     textures;
+    /// const std::shared_ptr<cleanup_target> cleaner;
 };
+
+// who keeps the memory alive?
+// TODO rethink the interface - there are too many cases...
+// streaming over the network.. secondary resources?
+// when to pull?
+// from local meda - when to pull images / textures -> not at this step.. where to find
+// transfrom gltf to something different?
+enum class parse_state
+{
+    more_input_needed,
+    error,
+    json_complete
+};
+
+std::function<parse_state(std::span<char const> const&)> create_parser(doc& destination);
 }  // namespace trivial_gltf
 #endif

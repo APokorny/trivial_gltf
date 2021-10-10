@@ -4,9 +4,45 @@
  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 ========================================================================== */
 
-namespace gltf
+#include <async_json/json_extractor.hpp>
+#include <async_json/saj_event_value.hpp>
+#include <trivial_gltf/gltf_parse.h>
+#include <glm/glm.hpp>
+
+namespace trivial_gltf
 {
 char const* component_names[] = {"SCALAR", "VEC2", "VEC3", "VEC4", "MAT3", "MAT4"};
-char const* attribute_names[] = {"POSITION", "NORMAL", "TANGENT", "TEXCOORD_0", "TEXCOORD_1", "COLOR_0", "JOINTS_0", "WEIGHTS_0"};
+
+template <typename T, glm::qualifier Q>
+constexpr auto assign_numeric(glm::qua<T, Q>& ref)
+{
+    return [&ref, index_ctr = 0](auto const& ev) mutable
+    {
+        switch (ev.value_type())
+        {
+            case async_json::saj_variant_value::float_number: ref[index_ctr++] = static_cast<T>(ev.as_float_number()); break;
+            case async_json::saj_variant_value::number: ref[index_ctr++] = static_cast<T>(ev.as_number()); break;
+            default: break;
+        }
+        if (index_ctr == 4) index_ctr = 0;
+    };
+}
+
+template <int I, typename T, glm::qualifier Q>
+constexpr auto assign_numeric(glm::vec<I, T, Q>& ref)
+{
+    return [&ref, index_ctr = 0](auto const& ev) mutable
+    {
+        switch (ev.value_type())
+        {
+            case async_json::saj_variant_value::float_number: ref[index_ctr++] = static_cast<T>(ev.as_float_number()); break;
+            case async_json::saj_variant_value::number: ref[index_ctr++] = static_cast<T>(ev.as_number()); break;
+            case async_json::saj_variant_value::boolean: ref[index_ctr++] = static_cast<T>(ev.as_bool()); break;
+            // case saj_variant_value::string: number_from_sv_t::try_parse(ev.as_string_view(), ref); break;
+            default: break;
+        }
+        if (index_ctr == I) index_ctr = 0;
+    };
+}
 
 }  // namespace gltf

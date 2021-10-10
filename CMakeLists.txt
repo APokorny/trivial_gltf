@@ -5,43 +5,32 @@ cmake_minimum_required(VERSION 3.14)
 project(trivial_gltf VERSION 0.1.0 LANGUAGES CXX)
 
 include(FetchContent)
-fetchcontent_declare(async_json
-  GIT_REPOSITORY https://github.com/APokorny/async_json
-  GIT_TAG development) # todo: pick a fixed revision
-
-fetchcontent_declare(Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        devel) # todo pick a tag
-
-FetchContent_declare(glm
-  GIT_REPOSITORY https://github.com/g-truc/glm.git
-  GIT_TAG        master) # todo pick a revision
-
-fetchcontent_makeavailable(async_json)
-fetchcontent_makeavailable(glm)
+CPMAddPackage("gh:g-truc/glm#master")
+CPMAddPackage("gh:APokorny/async_json#development")
 
 option(gltf_BUILD_TESTS "Build examples and tests" ON)
 add_library(gltf 
   include/trivial_gltf/gltf_parse.h
   src/parser.h
   src/parser.cpp)
-add_library(trivial_gltf::gltf ALIAS gltf)
 target_compile_features(gltf PUBLIC cxx_std_20)
-target_link_libraries(gltf PRIVATE async_json)
-target_include_directories(gltf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
-    $<INSTALL_INTERFACE:include>
-    )
+target_link_libraries(gltf PRIVATE async_json tiny_tuple)
+target_include_directories(gltf PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+  $<INSTALL_INTERFACE:include>
+  )
+
+add_library(trivial_gltf::gltf ALIAS gltf)
 install(TARGETS gltf EXPORT gltf-Targets DESTINATION include)
 install(EXPORT gltf-Targets
-    NAMESPACE gltf::
-    DESTINATION lib/cmake/trivial_gltf
-    )
+  NAMESPACE gltf::
+  DESTINATION lib/cmake/trivial_gltf
+  )
 install(DIRECTORY include/trivial_gltf DESTINATION include)
 
 if(gltf_BUILD_TESTS)
-    fetchcontent_makeavailable(Catch2)
+  CPMAddPackage("gh:catchorg/Catch2#devel")
 ## target_link_libraries(tests Catch2::Catch2)
-    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
-    include(CTest)
-    add_subdirectory(test)
+  list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
+  include(CTest)
+  add_subdirectory(test)
 endif()
